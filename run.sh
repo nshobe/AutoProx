@@ -24,16 +24,15 @@ EOF
 exit 1
 }
 function buildlxc(){
-ssh $vmbox "pvesh create /nodes/$vmbox/lxc/ \
+ssh $datacenter "pvesh create /nodes/$node1/lxc \
         -vmid=$vmid \
         -hostname=$hostname \
-        -storage=$storage1 \
         -password=$password \
         -ostemplate=$ostemplate \
         -memory=$memory \
         -swap=$swap \
-        -storage=$storage2 \
-        -rootfs=$lxc_disk \
+        -storage=$n1_stor_des \
+        -rootfs=$disk_size \
         -cpulimit=$lxc_cpulimit \
         -cpuunits=$lxc_cpuunits \
         -net0=$net0 \
