@@ -8,6 +8,7 @@ function usage() {
     OPTIONS:
      -h Show [H]elp (this message)
      -s [S]ettings file	(if not default)
+     -F [F]ind templates on target node
      -x l[x]c mode
      -m Virtual [m]achine mode
      -i vm[i]d
@@ -18,8 +19,13 @@ function usage() {
 	Use the settings file for "standards" and use options for things that differ.
 	You can call run.sh from your own script as many times and as many options as needed.
 
-	Example
-	ssh root@proxmox runme.sh -x -H newhost -P supersecure
+	Examples:
+
+        Creates new LXC with defined hostname and password
+	runme.sh -x -H newhost -P supersecure
+
+        Looks for available template files on proxmox node
+        runme,sh -F -d [datacenter]      
 EOF
 exit 1
 }
@@ -38,12 +44,24 @@ ssh $datacenter "pvesh create /nodes/$node1/lxc \
         -net0=$net0 \
         "
 }
+function findTemplates(){
+echo "$datacenter is the datacenter in use"
+echo "$node1 is the target node"
+ssh $datacenter "pvesh ls nodes/$node1/storage " | cut -d' ' -f2 > /tmp/pve.out
+cat /tmp/pve.out | while read -r line; do
+        ssh -n $datacenter "pvesh get nodes/napprox/storage/$line/content/"
+        done > /tmp/pve-list.out 
+cat /tmp/pve-list.out | grep volid | grep -v dump | grep -v disk
+exit 0
+}
 
 function parseopts () {
-    while getopts "hs:xmi:H:P:" OPTION ; do
+    while getopts "hs:Fbxmi:H:P:" OPTION ; do
         case $OPTION in
          h) usage		;;
          s) source $OPTARG	;;
+         F) findTemplates       ;;
+         b) build=1             ;;
          x) lxc=1		;;
          m) vm=1		;;
          i) vmid=$OPTARG	;;
@@ -52,12 +70,14 @@ function parseopts () {
         esac
     done
     ### Verify Mode is set ###
+if [[ $build -eq 1 ]]; then
     if [[ -z $lxc ]] ; then
         if [[ -z $vm ]] ; then
             print "Please select LXC or VM mode. Note, these options are mutually exclusive"
 	    usage
         fi
     fi
+fi
 }
 function main() {
 	if [[ $lxc -eq 1 ]] ; then
