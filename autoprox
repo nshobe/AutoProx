@@ -25,7 +25,7 @@ function usage() {
 	runme.sh -x -H newhost -P supersecure
 
         Looks for available template files on proxmox node
-        runme,sh -F -d [datacenter]      
+        runme.sh -F -d [datacenter]      
 EOF
 exit 1
 }
@@ -45,26 +45,31 @@ ssh $datacenter "pvesh create /nodes/$node1/lxc \
         "
 }
 function findTemplates(){
-echo "$datacenter is the datacenter in use"
-echo "$node1 is the target node"
+echo -ne '\E[34;40m'"\033[1m$datacenter\033[0m"" is the datacenter in use."'\n'
+echo -ne '\E[34;40m'"\033[1m$node1\033[0m"" is the target node."'\n'
 ssh $datacenter "pvesh ls nodes/$node1/storage " | cut -d' ' -f2 > /tmp/pve.out
 cat /tmp/pve.out | while read -r line; do
-        ssh -n $datacenter "pvesh get nodes/napprox/storage/$line/content/"
+        echo "going back in to SSH"
+        ssh -n $datacenter "pvesh get nodes/$node1/storage/$line/content/"
         done > /tmp/pve-list.out 
-cat /tmp/pve-list.out | grep volid | grep -v dump | grep -v disk
+echo -ne '\E[34;40m'"\033[1m      -Results-\033[0m"'\n' 
+cat /tmp/pve-list.out | grep volid | grep -v dump | grep -v disk | \
+        sed -n -e 's/^.* : //p'
 exit 0
 }
 
 function parseopts () {
-    while getopts "hs:Fbxmi:H:P:" OPTION ; do
+    while getopts "hs:Fbxmi:D:N:H:P:" OPTION ; do
         case $OPTION in
          h) usage		;;
          s) source $OPTARG	;;
-         F) findTemplates       ;;
+         F) o_find=1            ;;
          b) build=1             ;;
          x) lxc=1		;;
          m) vm=1		;;
          i) vmid=$OPTARG	;;
+         D) datacenter=$OPTARG  ;;
+         N) node1=$OPTARG       ;;
          H) hostname=$OPTARG	;;
          P) password=$OPTARG	;;
         esac
@@ -86,6 +91,9 @@ function main() {
 	if [[ $vm -eq 1 ]] ; then
 		buildvm
 	fi
+        if [[ $o_find -eq 1 ]] ; then
+                findTemplates
+        fi
 exit 0
 }
 parseopts $*
